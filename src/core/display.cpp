@@ -8,6 +8,33 @@
 #define MAX_MENU_SIZE (int)(HEIGHT/25)
 
 /***************************************************************************************
+** Function name: displayScrollingText
+** Description:   Scroll large texts into screen
+***************************************************************************************/
+void displayScrollingText(const String& text, Opt_Coord& coord) {
+  int len = text.length();
+  String displayText = text + "        "; // Add spaces for smooth looping
+  int scrollLen = len + 8; // Full text plus space buffer
+  static int i=0;
+  static long _lastmillis=0;
+  tft.setTextColor(coord.fgcolor,coord.bgcolor);
+  if (len < coord.size) {
+    // Text fits within limit, no scrolling needed
+    return;
+  } else if(millis()>_lastmillis+200) {
+    String scrollingPart = displayText.substring(i, i + (coord.size - 1)); // Display charLimit characters at a time
+    tft.fillRect(coord.x, coord.y, (coord.size-1) * LW * tft.textsize, LH * tft.textsize, bruceConfig.bgColor); // Clear display area
+    tft.setCursor(coord.x, coord.y);
+    tft.setCursor(coord.x, coord.y);
+    tft.print(scrollingPart);
+    if (i >= scrollLen - coord.size) i = -1; // Loop back
+    _lastmillis=millis();
+    i++;
+    if(i==1) _lastmillis=millis()+1000;
+  }
+}
+
+/***************************************************************************************
 ** Function name: TouchFooter
 ** Description:   Draw touch screen footer
 ***************************************************************************************/
@@ -245,6 +272,7 @@ void padprintln(double n, int digits, int16_t padx) {
 **********************************************************************/
 int loopOptions(std::vector<Option>& options, bool bright, bool submenu, String subText,int index){
   delay(200);
+  Opt_Coord coord;
   bool redraw = true;
   int menuSize = options.size();
   if(options.size()>MAX_MENU_SIZE) {
@@ -255,12 +283,16 @@ int loopOptions(std::vector<Option>& options, bool bright, bool submenu, String 
   while(1){
     if (redraw) {
       if(submenu) drawSubmenu(index, options, subText);
-      else drawOptions(index, options, bruceConfig.priColor, bruceConfig.bgColor);
+      else coord=drawOptions(index, options, bruceConfig.priColor, bruceConfig.bgColor);
       if(bright){
         setBrightness(String(options[index].label.c_str()).toInt(),false);
       }
       redraw=false;
       delay(REDRAW_DELAY);
+    }
+    if(!submenu) {
+      String txt=options[index].label.c_str();
+      displayScrollingText(txt, coord);
     }
 
     if(checkPrevPress()) {
@@ -336,7 +368,8 @@ void progressHandler(int progress, size_t total, String message) {
 ** Function name: drawOptions
 ** Description:   Função para desenhar e mostrar as opçoes de contexto
 ***************************************************************************************/
-void drawOptions(int index,std::vector<Option>& options, uint16_t fgcolor, uint16_t bgcolor) {
+Opt_Coord drawOptions(int index,std::vector<Option>& options, uint16_t fgcolor, uint16_t bgcolor) {
+    Opt_Coord coord;
     int menuSize = options.size();
     if(options.size()>MAX_MENU_SIZE) {
       menuSize = MAX_MENU_SIZE;
@@ -360,7 +393,14 @@ void drawOptions(int index,std::vector<Option>& options, uint16_t fgcolor, uint1
         else tft.setTextColor(fgcolor,bgcolor);
 
         String text="";
-        if(i==index) text+=">";
+        if(i==index) { 
+          text+=">";
+          coord.x=WIDTH*0.10+5+FM*LW;
+          coord.y=tft.getCursorY()+4;
+          coord.size=(WIDTH*0.8 - 10)/(LW*FM) - 1;
+          coord.fgcolor=fgcolor;
+          coord.bgcolor=bgcolor;
+        }
         else text +=" ";
         text += String(options[i].label.c_str()) + "              ";
         tft.setCursor(WIDTH*0.10+5,tft.getCursorY()+4);
@@ -375,6 +415,7 @@ void drawOptions(int index,std::vector<Option>& options, uint16_t fgcolor, uint1
     #if defined(HAS_TOUCH)
     TouchFooter();
     #endif
+    return coord;
 }
 
 /***************************************************************************************
@@ -568,7 +609,8 @@ void drawWireguardStatus(int x, int y) {
 ** Description:   Função para desenhar e mostrar o menu principal
 ***************************************************************************************/
 #define MAX_ITEMS (int)(HEIGHT-20)/(LH*2)
-void listFiles(int index, std::vector<FileList> fileList) {
+Opt_Coord listFiles(int index, std::vector<FileList> fileList) {
+    Opt_Coord coord;
     if(index==0){
       tft.fillScreen(bruceConfig.bgColor);
       tft.fillScreen(bruceConfig.bgColor);
@@ -591,7 +633,14 @@ void listFiles(int index, std::vector<FileList> fileList) {
             else if(fileList[i].operation==true) tft.setTextColor(ALCOLOR, bruceConfig.bgColor);
             else { tft.setTextColor(bruceConfig.priColor,bruceConfig.bgColor); }
 
-            if (index==i) txt=">";
+            if (index==i) { 
+              txt=">";
+              coord.x=10+FM*LW;
+              coord.y=tft.getCursorY();
+              coord.size=nchars;
+              coord.fgcolor=fileList[i].folder? getColorVariation(bruceConfig.priColor):bruceConfig.priColor;
+              coord.bgcolor=bruceConfig.bgColor;
+            }
             else txt=" ";
             txt+=fileList[i].filename + "                 ";
             tft.println(txt.substring(0,nchars));
@@ -601,7 +650,7 @@ void listFiles(int index, std::vector<FileList> fileList) {
     }
     tft.drawRoundRect(5, 5, WIDTH - 10, HEIGHT - 10, 5, bruceConfig.priColor);
     tft.drawRoundRect(5, 5, WIDTH - 10, HEIGHT - 10, 5, bruceConfig.priColor);
-
+    return coord;
 }
 
 
@@ -743,7 +792,7 @@ void jpegRender(int xpos, int ypos) {
 
 }
 
-bool showJpeg(FS fs, String filename, int x, int y) {
+bool showJpeg(FS fs, String filename, int x, int y, bool center) {
   File picture;
   if(fs.exists(filename))
     picture = fs.open(filename, FILE_READ);
@@ -799,6 +848,10 @@ bool showJpeg(FS fs, String filename, int x, int y) {
   }
 
   if (decoded) {
+    if(center) { 
+      x=(WIDTH-JpegDec.width)/2;
+      y=(HEIGHT-JpegDec.height)/2;
+    }
     jpegRender(x, y);
   }
 
@@ -816,12 +869,13 @@ bool showJpeg(FS fs, String filename, int x, int y) {
 #include <AnimatedGIF.h>
 
 #define NORMAL_SPEED
+#define GIF_BUFFER_SIZE 100
 //#define USE_DMA
 
 #ifdef USE_DMA
-  uint16_t usTemp[2][SAFE_STACK_BUFFER_SIZE]; // Global to support DMA use
+  uint16_t usTemp[2][GIF_BUFFER_SIZE]; // Global to support DMA use
 #else
-  uint16_t usTemp[1][SAFE_STACK_BUFFER_SIZE];    // Global to support DMA use
+  uint16_t usTemp[1][GIF_BUFFER_SIZE];    // Global to support DMA use
 #endif
 bool     dmaBuf = 0;
 
@@ -864,7 +918,7 @@ void GIFDraw(GIFDRAW *pDraw)
     {
       c = ucTransparent - 1;
       d = &usTemp[0][0];
-      while (c != ucTransparent && s < pEnd && iCount < SAFE_STACK_BUFFER_SIZE )
+      while (c != ucTransparent && s < pEnd && iCount < GIF_BUFFER_SIZE )
       {
         c = *s++;
         if (c == ucTransparent) // done, stop
@@ -904,10 +958,10 @@ void GIFDraw(GIFDRAW *pDraw)
 
     // Unroll the first pass to boost DMA performance
     // Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-    if (iWidth <= SAFE_STACK_BUFFER_SIZE)
+    if (iWidth <= GIF_BUFFER_SIZE)
       for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
     else
-      for (iCount = 0; iCount < SAFE_STACK_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+      for (iCount = 0; iCount < GIF_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
     tft.dmaWait();
@@ -924,10 +978,10 @@ void GIFDraw(GIFDRAW *pDraw)
     while (iWidth > 0)
     {
       // Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
-      if (iWidth <= SAFE_STACK_BUFFER_SIZE)
+      if (iWidth <= GIF_BUFFER_SIZE)
         for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
       else
-        for (iCount = 0; iCount < SAFE_STACK_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+        for (iCount = 0; iCount < GIF_BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA
       tft.dmaWait();
@@ -945,7 +999,7 @@ void * GIFOpenFile(const char *fname, int32_t *pSize)
 {
   static File FSGifFile;  // MEMO: declared static to survive return
   if(SD.exists(fname)) FSGifFile = SD.open(fname);
-  if(LittleFS.exists(fname)) FSGifFile = LittleFS.open(fname);
+  else if(LittleFS.exists(fname)) FSGifFile = LittleFS.open(fname);
   if (FSGifFile) {
     *pSize = FSGifFile.size();
     return (void *)&FSGifFile;
@@ -995,6 +1049,7 @@ int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
 
 bool showGIF(FS fs, String filename, int x, int y) {
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
+//#if defined(CARDPUTER)
   if(!fs.exists(filename))
     return false;
   static AnimatedGIF gif;  // MEMO: triggers stack canary if not static
@@ -1015,6 +1070,8 @@ bool showGIF(FS fs, String filename, int x, int y) {
     return true;
   }
   displayError("error opening GIF");
+#else
+  displayError("GIF unsupported on this device");
 #endif
   return false;
 }

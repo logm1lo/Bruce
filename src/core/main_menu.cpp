@@ -11,6 +11,7 @@ MainMenu::MainMenu() {
         &rfidMenu,
         &irMenu,
         &fmMenu,
+        &gpsMenu,
     #if defined(USE_NRF24_VIA_SPI)
         &nrf24Menu,
     #endif
@@ -19,6 +20,7 @@ MainMenu::MainMenu() {
             &scriptsMenu,
         #endif
     #endif
+        &fileMenu,
         &othersMenu,
         &clockMenu,
         &connectMenu,
@@ -37,6 +39,7 @@ MainMenu::~MainMenu() {}
 void MainMenu::previous(){
     _currentIndex--;
     if (_currentIndex < 0) _currentIndex = _totalItems - 1;
+    _checkDisabledMenus(false);
 }
 
 /***************************************************************************************
@@ -46,6 +49,7 @@ void MainMenu::previous(){
 void MainMenu::next(){
     _currentIndex++;
     if (_currentIndex >= _totalItems) _currentIndex = 0;
+    _checkDisabledMenus(true);
 }
 
 
@@ -57,29 +61,32 @@ void MainMenu::openMenuOptions(){
     _menuItems[_currentIndex]->optionsMenu();
 }
 
-
 /***************************************************************************************
 ** Function name: draw
 ** Description:   Função para desenhar e mostrar o menu principal
 ***************************************************************************************/
-void MainMenu::draw() {
+void MainMenu::draw(float scale) {
     MenuItemInterface* current_menu = _menuItems[_currentIndex];
 
     drawMainBorder(false);
-    // Fix draw main menu icon remaining lines for those smaller than others
-    tft.fillRect(40, 40, WIDTH-70, HEIGHT-70, bruceConfig.bgColor);
-    tft.setTextSize(FG);
-
-    current_menu->draw();
-
-    tft.setTextSize(FM);
-    tft.fillRect(10,30+80+(HEIGHT-134)/2, WIDTH-20,LH*FM, bruceConfig.bgColor);
-    tft.drawCentreString(current_menu->getName(), WIDTH/2, 30+80+(HEIGHT-134)/2, 1);
-    tft.setTextSize(FG);
-    tft.drawChar('<',10,HEIGHT/2+10);
-    tft.drawChar('>',WIDTH-(LW*FG+10),HEIGHT/2+10);
+    current_menu->draw(scale);
 
     #if defined(HAS_TOUCH)
     TouchFooter();
     #endif
+}
+
+
+void MainMenu::_checkDisabledMenus(bool next_button) {
+    MenuItemInterface* current_menu = _menuItems[_currentIndex];
+    std::vector<String> l = bruceConfig.disabledMenus;
+
+    String currName = current_menu->getName();
+    if( find(l.begin(), l.end(), currName)!=l.end() ) {
+        // menu disabled, skip to the next/prev one and re-check
+        if(next_button)
+            next();
+        else
+            previous();
+    }
 }

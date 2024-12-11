@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <map>
+#include <vector>
 
 #define DEFAULT_PRICOLOR 0xA80F
 
@@ -61,9 +62,13 @@ public:
 
     int rfidModule = M5_RFID2_MODULE;
 
+    int gpsBaudrate = 9600;
+
     String startupApp = "";
     String wigleBasicToken = "";
     int devMode = 0;
+
+    std::vector<String> disabledMenus = {};
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Constructor
@@ -115,11 +120,15 @@ public:
     void setRfidModule(RFIDModules value);
     void validateRfidModuleValue();
 
+    void setGpsBaudrate(int value);
+    void validateGpsBaudrateValue();
+
     void setStartupApp(String value);
     void setWigleBasicToken(String value);
     void setDevMode(int value);
     void validateDevModeValue();
-
+    void addDisabledMenu(String value);
+    // TODO: removeDisabledMenu(String value);
 };
 
 #endif

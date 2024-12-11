@@ -1,12 +1,12 @@
-#ifndef __IR_MENU_H__
-#define __IR_MENU_H__
+#ifndef __GPS_MENU_H__
+#define __GPS_MENU_H__
 
 #include "MenuItemInterface.h"
 
 
-class IRMenu : public MenuItemInterface {
+class GpsMenu : public MenuItemInterface {
 public:
-    IRMenu() : MenuItemInterface("IR") {}
+    GpsMenu() : MenuItemInterface("GPS") {}
 
     void optionsMenu(void);
     void drawIcon(float scale);

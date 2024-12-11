@@ -82,7 +82,7 @@ void wifi_atk_info(String tssid, String mac, uint8_t channel)
   tft.drawString("AP: " + tssid, 10, 48);
   tft.drawString("Channel: " + String(channel), 10, 66);
   tft.drawString(mac, 10, 84);
-  tft.drawString("Press " + String(BTN_ALIAS) + " to act", 10, tft.height() - 20);
+  tft.drawString("Press " + String(BTN_ALIAS) + " to act", 10, HEIGHT - 20);
 
   delay(300);
   while (!checkSelPress())
@@ -561,7 +561,7 @@ void beaconAttack()
   options = {
       {"Funny SSID", [&]()
        { BeaconMode = 0; txt = "Spamming Funny"; }},
-      {"Rucky Roll", [&]()
+      {"Ricky Roll", [&]()
        { BeaconMode = 1; txt = "Spamming Ricky"; }},
       {"Random SSID", [&]()
        { BeaconMode = 2; txt = "Spamming Random"; }},
@@ -575,7 +575,7 @@ void beaconAttack()
   displayRedStripe(txt, TFT_WHITE, bruceConfig.priColor);
   while (1)
   {
-    displayRedStripe(String(BeaconMode), TFT_WHITE, bruceConfig.priColor);
+    displayRedStripe(String(txt), TFT_WHITE, bruceConfig.priColor);
     delay(200);
     if (BeaconMode == 0)
     {

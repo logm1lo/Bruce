@@ -7,6 +7,7 @@
 #include "modules/others/audio.h"
 #include "modules/rf/rf.h"
 #include "modules/ir/TV-B-Gone.h"
+#include "modules/ir/custom_ir.h"
 #include "modules/wifi/wigle.h"
 #include "modules/others/bad_usb.h"
 #include "modules/others/qrcode_menu.h"
@@ -454,6 +455,7 @@ void readFs(FS fs, String folder, String allowed_ext) {
 **  Where you choose what to do with your SD Files
 **********************************************************************/
 String loopSD(FS &fs, bool filePicker, String allowed_ext) {
+  Opt_Coord coord;
   String result = "";
   bool reload=false;
   bool redraw = true;
@@ -484,22 +486,23 @@ String loopSD(FS &fs, bool filePicker, String allowed_ext) {
       if(strcmp(PreFolder.c_str(),Folder.c_str()) != 0 || reload){
         tft.fillScreen(bruceConfig.bgColor);
         tft.drawRoundRect(5,5,WIDTH-10,HEIGHT-10,5,bruceConfig.priColor);
-        index=0;
         Serial.println("reload to read: " + Folder);
         readFs(fs, Folder, allowed_ext);
         PreFolder = Folder;
         maxFiles = fileList.size()-1;
+        if(strcmp(PreFolder.c_str(),Folder.c_str()) != 0 || index > maxFiles) index=0;
         reload=false;
       }
       if(fileList.size()<2) readFs(fs, Folder,allowed_ext);
 
-      listFiles(index, fileList);
+      coord=listFiles(index, fileList);
       #if defined(HAS_TOUCH)
         TouchFooter();
       #endif
       delay(REDRAW_DELAY);
       redraw = false;
     }
+    displayScrollingText(fileList[index].filename, coord);
 
     #ifdef HAS_KEYBOARD
       if(checkEscPress()) break;  // quit
@@ -630,15 +633,18 @@ String loopSD(FS &fs, bool filePicker, String allowed_ext) {
 
           // custom file formats commands added in front
           if(filepath.endsWith(".jpg")) options.insert(options.begin(), {"View Image",  [&]() {
-              showJpeg(fs, filepath);
+              showJpeg(fs, filepath,0,0,true);
               delay(750);
               while(!checkAnyKeyPress()) yield();
             }});
+            /*
+              // GIFs are not working at all, need study
           if(filepath.endsWith(".gif")) options.insert(options.begin(), {"View Image",  [&]() {
               showGIF(fs, filepath);
               delay(750);
               while(!checkAnyKeyPress()) yield();
             }});
+            */
           if(filepath.endsWith(".ir")) options.insert(options.begin(), {"IR Tx SpamAll",  [&]() {
               delay(200);
               txIrFile(&fs, filepath);
@@ -703,6 +709,8 @@ String loopSD(FS &fs, bool filePicker, String allowed_ext) {
           }
           #if defined(HAS_NS4168_SPKR)
           if(isAudioFile(filepath)) options.insert(options.begin(), {"Play Audio",  [&]() {
+            delay(200);
+            Serial.println(checkAnyKeyPress());
             delay(200);
             playAudioFile(&fs, filepath);
             setup_gpio(); //TODO: remove after fix select loop
