@@ -6,12 +6,11 @@
  * @date 2024-11-20
  */
 
-#ifndef GPS_TRACKER_H
-#define GPS_TRACKER_H
+#ifndef __GPS_TRACKER_H__
+#define __GPS_TRACKER_H__
 
-#include "core/globals.h"
 #include <TinyGPS++.h>
-
+#include <globals.h>
 
 class GPSTracker {
 public:

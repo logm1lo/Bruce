@@ -1,9 +1,9 @@
 #include "core/display.h"
 
+#include <DNSServer.h>
+#include <WebServer.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
-#include <WebServer.h>
-#include <DNSServer.h>
 
 void ReverseShell() {
     WebServer webServer(80); // HTTP server
@@ -20,10 +20,10 @@ void ReverseShell() {
     tft.fillScreen(bruceConfig.bgColor);
     tft.setTextSize(FM);
     tft.setTextColor(TFT_RED, bruceConfig.bgColor);
-    tft.drawCentreString("Reverse Shell", WIDTH / 2, 10, 1);
+    tft.drawCentreString("Reverse Shell", tftWidth / 2, 10, 1);
     tft.setTextColor(TFT_WHITE, bruceConfig.bgColor);
     tft.setTextSize(FP);
-    tft.setCursor(15,33);
+    tft.setCursor(15, 33);
     tft.println("Developed by Fourier (github.com/9dl)");
     tft.println("Starting reverse shell server...");
 
@@ -114,14 +114,13 @@ void ReverseShell() {
             }
         }
 
-
         if (shellConnected && !tcpClient.connected()) {
             tft.println("Client disconnected.");
             shellConnected = false;
             tcpClient.stop();
         }
 
-        if (checkEscPress()) {
+        if (check(EscPress)) {
             tft.println("Exiting reverse shell server...");
             tcpServer.stop();
             webServer.stop();

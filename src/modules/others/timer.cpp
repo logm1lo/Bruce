@@ -8,12 +8,74 @@
 
 #include "timer.h"
 #include "core/display.h"
+#include "core/utils.h"
 #include "modules/others/audio.h"
 
 #define DELAY_VALUE 150
 
-Timer::Timer() {
-    setup();
+Timer::Timer() { setup(); }
+
+Timer::~Timer() {
+    tft.fillScreen(bruceConfig.bgColor);
+    backToMenu();
+}
+
+void Timer::setup() {
+    int hours = 0;
+    int minutes = 0;
+    int seconds = 0;
+    int settingMode = 0;
+
+    char timeString[9];
+
+    tft.fillScreen(bruceConfig.bgColor);
+
+    delay(DELAY_VALUE);
+
+    while (true) {
+        snprintf(timeString, sizeof(timeString), "%02d:%02d:%02d", hours % 100, minutes % 100, seconds % 100);
+
+        drawMainBorderWithTitle("Set a timer", false);
+        tft.setTextSize(fontSize);
+        tft.drawCentreString(timeString, timerX, timerY, 1);
+
+        clearUnderline();
+
+        if (settingMode == 0) underlineHours();
+        else if (settingMode == 1) underlineMinutes();
+        else if (settingMode == 2) underlineSeconds();
+
+        if (check(NextPress)) {
+            if (settingMode == 0 && ++hours > 99) {
+                hours = 0;
+            } else if (settingMode == 1 && ++minutes >= 60) {
+                minutes = 0;
+            } else if (settingMode == 2 && ++seconds >= 60) {
+                seconds = 0;
+            }
+        }
+
+        if (check(PrevPress)) {
+            if (settingMode == 0 && --hours < 0) {
+                hours = 99;
+            } else if (settingMode == 1 && --minutes < 0) {
+                minutes = 59;
+            } else if (settingMode == 2 && --seconds < 0) {
+                seconds = 59;
+            }
+        }
+
+        if (check(SelPress)) {
+            if (++settingMode > 2 && (hours > 0 || minutes > 0 || seconds > 0)) {
+                duration = (hours * 3600 + minutes * 60 + seconds) * 1000;
+                break;
+            }
+
+            if (settingMode > 2) settingMode = 0;
+        }
+    }
+
+    return loop();
 }
 
 void Timer::loop() {
@@ -25,7 +87,7 @@ void Timer::loop() {
 
     tft.fillScreen(bruceConfig.bgColor);
 
-    for (;;) {
+    while (true) {
         currentMillis = millis();
         elapsedMillis = currentMillis - startMillis;
 
@@ -33,100 +95,57 @@ void Timer::loop() {
 
         int seconds = (remainingMillis / 1000) % 60;
         int minutes = (remainingMillis / 60000) % 60;
-        int hours = (remainingMillis / 3600000);
- 
+        int hours = (remainingMillis / 3600000) % 100;
+
         snprintf(timeString, sizeof(timeString), "%02d:%02d:%02d", hours, minutes, seconds);
-
-        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-        drawMainBorder(false);
-        tft.setTextSize(4);
-        tft.drawCentreString(timeString, WIDTH / 2, HEIGHT / 2 - 13, 1);
-
-        if (checkEscPress()) {
-            duration = 0;
-            tft.fillScreen(bruceConfig.bgColor);
-            returnToMenu = true;
-            break;
+        uint8_t f_size = 4;
+        for (uint8_t i = 4; i > 0; i--) {
+            if (i * LW * 8 < (tftWidth - BORDER_PAD_X * 2)) {
+                f_size = i;
+                break;
+            }
         }
+        drawMainBorder(false);
+
+        tft.setTextSize(f_size);
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+        tft.drawCentreString(timeString, timerX, timerY, 1);
+
+        if (check(EscPress)) { break; }
 
         if (elapsedMillis >= duration) {
-            tft.fillScreen(bruceConfig.bgColor);
             _tone(2000, 1000);
-            returnToMenu = true;
             break;
         }
-
-        delay(DELAY_VALUE);
     }
 }
 
-void Timer::setup() {
-    
-    int hours = 0;
-    int minutes = 0;
-    int seconds = 0;
-    int settingMode = 0;
-    int underlineHeight = HEIGHT / 3 * 2;
-    int underlineWidth = WIDTH / 5;
+void Timer::clearUnderline() {
+    tft.drawLine(BORDER_PAD_X, underlineY, tftWidth - BORDER_PAD_X, underlineY, bruceConfig.bgColor);
+}
 
-    char timeString[9];
+void Timer::underlineHours() {
+    tft.drawLine(
+        timerX - (4 * LW * fontSize),
+        underlineY,
+        timerX - (2 * LW * fontSize),
+        underlineY,
+        bruceConfig.priColor
+    );
+}
 
-    tft.fillScreen(bruceConfig.bgColor);
+void Timer::underlineMinutes() {
+    tft.drawLine(
+        timerX - (LW * fontSize), underlineY, timerX + (LW * fontSize), underlineY, bruceConfig.priColor
+    );
+}
 
-    delay(DELAY_VALUE);
-
-    for (;;) {
-        snprintf(timeString, sizeof(timeString), "%02d:%02d:%02d", hours, minutes, seconds);
-
-        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
-        tft.setTextSize(2);
-        drawMainBorderWithTitle("Set a timer", false);
-        tft.setTextSize(4);
-        tft.drawCentreString(timeString, WIDTH / 2, HEIGHT / 2 - 13, 1);
-
-    if (settingMode == 0) {
-            tft.drawLine(WIDTH / 10 * 7, underlineHeight, WIDTH / 10 * 7 + underlineWidth, underlineHeight, bruceConfig.bgColor);
-            tft.drawLine(WIDTH / 10, underlineHeight, WIDTH / 10 + underlineWidth, underlineHeight, bruceConfig.priColor);
-        } else if (settingMode == 1) {
-            tft.drawLine(WIDTH / 10, underlineHeight, WIDTH / 10 + underlineWidth, underlineHeight, bruceConfig.bgColor);
-            tft.drawLine(WIDTH / 10 * 4, underlineHeight, WIDTH / 10 * 4 + underlineWidth, underlineHeight, bruceConfig.priColor);
-        } else if (settingMode == 2) {
-            tft.drawLine(WIDTH / 10 * 4, underlineHeight, WIDTH / 10 * 4 + underlineWidth, underlineHeight, bruceConfig.bgColor);
-            tft.drawLine(WIDTH / 10 * 7, underlineHeight, WIDTH / 10 * 7 + underlineWidth, underlineHeight, bruceConfig.priColor);
-        }
-
-        if (checkNextPress()) {
-            if (settingMode == 0 && ++hours > 99) {
-                hours = 0;
-            } else if (settingMode == 1 && ++minutes >= 60) {
-                minutes = 0;
-            } else if (settingMode == 2 && ++seconds >= 60) {
-                seconds = 0;
-            }
-        }
-
-        if (checkPrevPress()) {
-            if (settingMode == 0 && --hours < 0) {
-                hours = 99;
-            } else if (settingMode == 1 && --minutes < 0) {
-                minutes = 59;
-            } else if (settingMode == 2 && --seconds < 0) {
-                seconds = 59;
-            }
-        }
-
-        if (checkSelPress()) {
-            if (++settingMode > 2 && (hours > 0 || minutes > 0 || seconds > 0)) {
-                duration = (hours * 3600 + minutes * 60 + seconds) * 1000;
-                loop();
-                break;
-            }
-
-            if (settingMode > 2 && hours == 0 && minutes == 0 && seconds == 0) {
-                settingMode = 0;
-            }
-        }
-
-        delay(DELAY_VALUE);
-    }
+void Timer::underlineSeconds() {
+    tft.drawLine(
+        timerX + (2 * LW * fontSize),
+        underlineY,
+        timerX + (4 * LW * fontSize),
+        underlineY,
+        bruceConfig.priColor
+    );
 }
