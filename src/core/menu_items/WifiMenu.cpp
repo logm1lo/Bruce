@@ -8,12 +8,12 @@
 #include "modules/ethernet/ARPScanner.h"
 #include "modules/wifi/ap_info.h"
 #include "modules/wifi/clients.h"
-#include "modules/wifi/dpwo.h"
 #include "modules/wifi/evil_portal.h"
 #include "modules/wifi/scan_hosts.h"
 #include "modules/wifi/sniffer.h"
 #include "modules/wifi/wifi_atks.h"
 #include "modules/wifi/karma_attack.h"
+#include "core/wifi/wifi_mac.h"
 
 #ifndef LITE_VERSION
 #include "modules/pwnagotchi/pwnagotchi.h"
@@ -75,7 +75,6 @@ void WifiMenu::optionsMenu() {
 #ifndef LITE_VERSION
     options.push_back({"TelNET", telnet_setup});
     options.push_back({"SSH", lambdaHelper(ssh_setup, String(""))});
-    options.push_back({"DPWO", dpwo_setup});
     options.push_back({"Sniffers", [=]() {
         std::vector<Option> snifferOptions;
 
@@ -113,6 +112,7 @@ void WifiMenu::configMenu() {
     options = {
         {"Add Evil Wifi",    addEvilWifiMenu         },
         {"Remove Evil Wifi", removeEvilWifiMenu      },
+        {"Change MAC", wifiMACMenu      },
         {"Back",             [=]() { optionsMenu(); }},
     };
 

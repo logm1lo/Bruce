@@ -326,9 +326,10 @@ void otherIRcodes() {
     options.push_back({"Main Menu", [&]() { exit = true; }});
     databaseFile.close();
 
-#ifdef USE_BQ25896 /// DISABLE 5V OUTPUT
-    PPM.disableOTG();
-#endif
+ #ifdef USE_BOOST  ///DISABLE 5V OUTPUT
+  PPM.disableOTG();
+  #endif
+
 
     digitalWrite(bruceConfig.irTx, LED_OFF);
     int idx = 0;
@@ -584,7 +585,7 @@ void sendKaseikyoCommand(String address, String command) {
 
 bool sendDecodedCommand(String protocol, String value, uint8_t bits) {
     // https://github.com/crankyoldgit/IRremoteESP8266/blob/master/examples/SmartIRRepeater/SmartIRRepeater.ino
-#ifndef LITE_VERSION
+#if !defined(LITE_VERSION) && !defined(ARDUINO_M5STICK_C_PLUS)
     decode_type_t type = strToDecodeType(protocol.c_str());
     if (type == decode_type_t::UNKNOWN) return false;
 
@@ -632,16 +633,16 @@ bool sendDecodedCommand(String protocol, String value, uint8_t bits) {
     digitalWrite(bruceConfig.irTx, LED_OFF);
     return success;
 #else
-    displayTextLine("Unavailable on LITE Version");
+    displayTextLine("Unavailable on this Version");
     delay(1000);
     return false;
 #endif
 }
 
 void sendRawCommand(uint16_t frequency, String rawData) {
-#ifdef USE_BQ25896 /// ENABLE 5V OUTPUT
-    PPM.enableOTG();
-#endif
+ #ifdef USE_BOOST  ///ENABLE 5V OUTPUT
+  PPM.enableOTG();
+  #endif
 
     IRsend irsend(bruceConfig.irTx); // Set the GPIO to be used to sending the message.
     irsend.begin();
